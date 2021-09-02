@@ -85,6 +85,36 @@
         - { src: '/tmp/netboot/2004/ubuntu-installer/amd64/linux', dest: '/tftpboot/2004/'}
         - { src: '/tmp/netboot/2004/ubuntu-installer/amd64/initrd.gz', dest: '/tftpboot/2004/'}
 
+    - name: Creating temp dir for clonezilla
+      file:
+        path: "/tmp/clonezilla"
+        state: directory
+
+    - name: Check if clonezilla has been downloaded
+      stat:
+        path: /tmp/clonezilla/clonezilla.iso
+      register: clonezilla_file
+
+    - name: Download clonezilla
+      get_url:
+        url: https://versaweb.dl.sourceforge.net/project/clonezilla/clonezilla_live_alternative/20210817-hirsute/clonezilla-live-20210817-hirsute-amd64.iso
+        dest: /tmp/clonezilla/clonezilla.iso
+      when: clonezilla_file.stat.exists == false
+
+    - name: Create tftpboot clonezilla dir
+      file:
+        path: "/tftpboot/clonezilla"
+        state: directory
+    
+    - name: Extract clonezilla files to tftpboot
+      iso_extract:
+        image: /tmp/clonezilla/clonezilla.iso
+        dest: /tftpboot/clonezilla/
+        files:
+        - live/vmlinuz
+        - live/initrd.img
+        - live/filesystem.squashfs
+
 
   handlers:
     - name: restart_dnsmasq
