@@ -49,6 +49,42 @@
     - name: Create pxe config
       copy: src=files/pxedefault.conf dest=/tftpboot/pxelinux.cfg/default
 
+    - name: Creating temp dir for netboot
+      file:
+        path: "/tmp/netboot/2004"
+        state: directory
+    
+    - name: Check if netboot has been downloaded
+      stat:
+        path: /tmp/netboot/netboot.tar.gz
+      register: netboot_file
+
+    - name: Download netboot zip
+      get_url:
+        url: http://archive.ubuntu.com/ubuntu/ubuntu/dists/focal/main/installer-amd64/current/legacy-images/netboot/netboot.tar.gz
+        dest: /tmp/netboot/
+      when: netboot_file.stat.exists == false
+
+    - name: Extract netboot
+      unarchive:
+        src: /tmp/netboot/netboot.tar.gz
+        dest: /tmp/netboot/2004
+        remote_src: yes
+    
+    - name: Create tftpboot linux dir
+      file:
+        path: "/tftpboot/2004"
+        state: directory
+
+    - name: Copy PXE linux install files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        remote_src: yes
+      loop:
+        - { src: '/tmp/netboot/2004/ubuntu-installer/amd64/linux', dest: '/tftpboot/2004/'}
+        - { src: '/tmp/netboot/2004/ubuntu-installer/amd64/initrd.gz', dest: '/tftpboot/2004/'}
+
 
   handlers:
     - name: restart_dnsmasq
