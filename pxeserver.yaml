@@ -3,7 +3,55 @@
   hosts: all
   gather_facts: false
   become: true
+  pre_tasks:
+    - name: update repositories
+      apt: update_cache=yes
+      changed_when: False
   tasks:
     - name: Install packages
       apt: 
-        name: ['htop', 'tmux', 'net-tools']
+        name: ['htop', 'tmux', 'net-tools', 'pxelinux', 'syslinux', 'dnsmasq']
+
+    - name: Move original dnmasq
+      command: mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
+      args:
+        removes: /etc/dnsmasq.conf
+        creates: /etc/dnsmasq.conf.orig
+
+    - name: Creating tftproot
+      file:
+        path: "/tftpboot/pxelinux.cfg"
+        state: directory
+
+    - name: Create dnsmasq
+      copy: src=files/dnsmasq.conf dest=/etc/dnsmasq.conf
+      notify: restart_dnsmasq
+
+    - name: update dnsmasq default config
+      lineinfile:
+        path: /etc/default/dnsmasq
+        regexp: '^DNSMASQ_EXCEPT='
+        line: 'DNSMASQ_EXCEPT=lo'
+      notify: restart_dnsmasq
+
+    - name: Copy PXE boot files
+      copy:
+        src: '{{item.src}}'
+        dest: '{{item.dest}}'
+        remote_src: yes
+      loop:
+        - { src: '/usr/lib/PXELINUX/pxelinux.0', dest: '/tftpboot/'}
+        - { src: '/usr/lib/syslinux/modules/bios/ldlinux.c32', dest: '/tftpboot/'}
+        - { src: '/usr/lib/syslinux/modules/bios/libmenu.c32', dest: '/tftpboot/'}
+        - { src: '/usr/lib/syslinux/modules/bios/libutil.c32', dest: '/tftpboot/'}
+        - { src: '/usr/lib/syslinux/modules/bios/menu.c32', dest: '/tftpboot/'}
+
+    - name: Create pxe config
+      copy: src=files/pxedefault.conf dest=/tftpboot/pxelinux.cfg/default
+
+
+  handlers:
+    - name: restart_dnsmasq
+      service:
+        name: dnsmasq.service
+        state: restarted
