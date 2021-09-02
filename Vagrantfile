@@ -4,6 +4,7 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/focal64"
   config.vm.hostname = "focal"
+  config.vm.provision "ansible", playbook: "pxeserver.yaml"
   config.vm.boot_timeout = 3000
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.network "public_network", ip: "192.168.1.220"

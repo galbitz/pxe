@@ -1,0 +1,9 @@
+---
+- name: deploy
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install packages
+      apt: 
+        name: ['htop', 'tmux', 'net-tools']
